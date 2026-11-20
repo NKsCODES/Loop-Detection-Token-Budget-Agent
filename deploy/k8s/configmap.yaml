@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loopguard-config
+  namespace: loopguard
+data:
+  LOOPGUARD_ENV: prod
+  LOOPGUARD_LOG_LEVEL: INFO
+  LOOPGUARD_LLM_PROVIDER: openai
+  LOOPGUARD_LLM_MODEL: gpt-4.1-mini
+  # Guard thresholds (nested settings use a double underscore)
+  LOOPGUARD_GUARD__MAX_STEPS: "20"
+  LOOPGUARD_GUARD__MAX_CALLS_PER_TOOL: "8"
+  LOOPGUARD_GUARD__MAX_IDENTICAL_CALLS: "3"
+  LOOPGUARD_GUARD__TOKEN_BUDGET: "60000"
+  LOOPGUARD_GUARD__COST_BUDGET_USD: "0.50"
+  # Set to your model's current list price per one million tokens
+  LOOPGUARD_PRICING__INPUT_PER_MILLION: "0.40"
+  LOOPGUARD_PRICING__OUTPUT_PER_MILLION: "1.60"

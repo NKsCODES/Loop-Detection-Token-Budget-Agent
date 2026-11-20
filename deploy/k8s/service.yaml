@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: loopguard-api
+  namespace: loopguard
+  labels:
+    app.kubernetes.io/name: loopguard-api
+spec:
+  selector:
+    app.kubernetes.io/name: loopguard-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

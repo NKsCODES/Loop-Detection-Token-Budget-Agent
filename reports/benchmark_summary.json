@@ -1,0 +1,202 @@
+{
+  "variants": {
+    "baseline": {
+      "variant": "baseline",
+      "tasks": 50,
+      "trap_tasks": 30,
+      "stuck": 30,
+      "stuck_rate": 0.6,
+      "stuck_traps": 30,
+      "stuck_healthy": 0,
+      "passed": 20,
+      "pass_rate": 0.4,
+      "healthy_passed": 20,
+      "traps_passed": 0,
+      "traps_stopped_by_reviewer": 0,
+      "total_tokens": 492574,
+      "trap_tokens": 389969,
+      "healthy_tokens": 102605,
+      "total_cost_usd": 1.592,
+      "llm_calls": 469,
+      "reviews": 0,
+      "loop_reviews": 0,
+      "budget_reviews": 0,
+      "loop_false_positives": 0,
+      "median_detection_step": null,
+      "detectors": {},
+      "status_counts": {
+        "completed": 20,
+        "stuck": 30
+      }
+    },
+    "step_limit_only": {
+      "variant": "step_limit_only",
+      "tasks": 50,
+      "trap_tasks": 30,
+      "stuck": 31,
+      "stuck_rate": 0.62,
+      "stuck_traps": 30,
+      "stuck_healthy": 1,
+      "passed": 19,
+      "pass_rate": 0.38,
+      "healthy_passed": 19,
+      "traps_passed": 0,
+      "traps_stopped_by_reviewer": 0,
+      "total_tokens": 376291,
+      "trap_tokens": 276496,
+      "healthy_tokens": 99795,
+      "total_cost_usd": 1.2202,
+      "llm_calls": 377,
+      "reviews": 0,
+      "loop_reviews": 0,
+      "budget_reviews": 0,
+      "loop_false_positives": 0,
+      "median_detection_step": 10.0,
+      "detectors": {
+        "max_steps": 30
+      },
+      "status_counts": {
+        "completed": 19,
+        "aborted": 31
+      }
+    },
+    "loopguard": {
+      "variant": "loopguard",
+      "tasks": 50,
+      "trap_tasks": 30,
+      "stuck": 0,
+      "stuck_rate": 0.0,
+      "stuck_traps": 0,
+      "stuck_healthy": 0,
+      "passed": 39,
+      "pass_rate": 0.78,
+      "healthy_passed": 20,
+      "traps_passed": 19,
+      "traps_stopped_by_reviewer": 11,
+      "total_tokens": 304169,
+      "trap_tokens": 201228,
+      "healthy_tokens": 102941,
+      "total_cost_usd": 0.9859,
+      "llm_calls": 290,
+      "reviews": 44,
+      "loop_reviews": 42,
+      "budget_reviews": 2,
+      "loop_false_positives": 1,
+      "median_detection_step": 3.0,
+      "detectors": {
+        "exact_repeat": 12,
+        "stagnation": 6,
+        "cycle": 6,
+        "tool_overuse": 6
+      },
+      "status_counts": {
+        "completed": 39,
+        "rejected": 11
+      }
+    }
+  },
+  "threshold_sweep": {
+    "loopguard_n2": {
+      "variant": "loopguard_n2",
+      "tasks": 50,
+      "trap_tasks": 30,
+      "stuck": 0,
+      "stuck_rate": 0.0,
+      "stuck_traps": 0,
+      "stuck_healthy": 0,
+      "passed": 39,
+      "pass_rate": 0.78,
+      "healthy_passed": 20,
+      "traps_passed": 19,
+      "traps_stopped_by_reviewer": 11,
+      "total_tokens": 265417,
+      "trap_tokens": 162104,
+      "healthy_tokens": 103313,
+      "total_cost_usd": 0.86,
+      "llm_calls": 250,
+      "reviews": 46,
+      "loop_reviews": 44,
+      "budget_reviews": 2,
+      "loop_false_positives": 3,
+      "median_detection_step": 2.0,
+      "detectors": {
+        "exact_repeat": 12,
+        "stagnation": 6,
+        "cycle": 6,
+        "tool_overuse": 6
+      },
+      "status_counts": {
+        "completed": 39,
+        "rejected": 11
+      }
+    },
+    "loopguard_n3": {
+      "variant": "loopguard_n3",
+      "tasks": 50,
+      "trap_tasks": 30,
+      "stuck": 0,
+      "stuck_rate": 0.0,
+      "stuck_traps": 0,
+      "stuck_healthy": 0,
+      "passed": 39,
+      "pass_rate": 0.78,
+      "healthy_passed": 20,
+      "traps_passed": 19,
+      "traps_stopped_by_reviewer": 11,
+      "total_tokens": 304169,
+      "trap_tokens": 201228,
+      "healthy_tokens": 102941,
+      "total_cost_usd": 0.9859,
+      "llm_calls": 290,
+      "reviews": 44,
+      "loop_reviews": 42,
+      "budget_reviews": 2,
+      "loop_false_positives": 1,
+      "median_detection_step": 3.0,
+      "detectors": {
+        "exact_repeat": 12,
+        "stagnation": 6,
+        "cycle": 6,
+        "tool_overuse": 6
+      },
+      "status_counts": {
+        "completed": 39,
+        "rejected": 11
+      }
+    },
+    "loopguard_n4": {
+      "variant": "loopguard_n4",
+      "tasks": 50,
+      "trap_tasks": 30,
+      "stuck": 0,
+      "stuck_rate": 0.0,
+      "stuck_traps": 0,
+      "stuck_healthy": 0,
+      "passed": 39,
+      "pass_rate": 0.78,
+      "healthy_passed": 20,
+      "traps_passed": 19,
+      "traps_stopped_by_reviewer": 11,
+      "total_tokens": 347752,
+      "trap_tokens": 244811,
+      "healthy_tokens": 102941,
+      "total_cost_usd": 1.1262,
+      "llm_calls": 330,
+      "reviews": 44,
+      "loop_reviews": 42,
+      "budget_reviews": 2,
+      "loop_false_positives": 1,
+      "median_detection_step": 4.0,
+      "detectors": {
+        "exact_repeat": 12,
+        "stagnation": 6,
+        "cycle": 6,
+        "tool_overuse": 6
+      },
+      "status_counts": {
+        "completed": 39,
+        "rejected": 11
+      }
+    }
+  }
+}

@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoopGuard review console</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1d2433; --muted: #5d6677; --line: #dfe3ea;
+    --accent: #2457d6; --warn: #b26a00; --bad: #b42318; --good: #1f7a3d;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+         background: var(--bg); color: var(--ink); }
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 24px;
+           background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  header .sub { color: var(--muted); }
+  header input { margin-left: auto; width: 220px; }
+  main { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 20px;
+         padding: 20px 24px; max-width: 1400px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+            padding: 16px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+       margin: 0 0 12px; }
+  textarea, input, select { width: 100%; font: inherit; padding: 8px 10px;
+                            border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  textarea { min-height: 84px; resize: vertical; }
+  button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--line);
+           background: #fff; cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.approve { border-color: var(--good); color: var(--good); }
+  button.reject { border-color: var(--bad); color: var(--bad); }
+  button:disabled { opacity: .5; cursor: wait; }
+  .row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .card { border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 6px;
+          padding: 12px; margin-bottom: 12px; }
+  .card .task { font-weight: 600; }
+  .card .why { margin: 6px 0; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px;
+          border: 1px solid var(--line); }
+  .s-completed { color: var(--good); } .s-paused { color: var(--warn); }
+  .s-rejected, .s-aborted, .s-stuck, .s-failed { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.mono, .mono { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  .empty { color: var(--muted); padding: 8px 0; }
+  #detail pre { white-space: pre-wrap; background: var(--bg); padding: 10px; border-radius: 6px;
+                font-family: var(--mono); font-size: 12px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>LoopGuard</h1>
+  <span class="sub">Review console for paused agent runs</span>
+  <input id="apikey" type="password" placeholder="X-API-Key (if enabled)">
+</header>
+<main>
+  <div>
+    <section>
+      <h2>Start a run</h2>
+      <select id="examples"><option value="">Pick an example task</option></select>
+      <div style="height:8px"></div>
+      <textarea id="task" placeholder="Describe the task for the agent"></textarea>
+      <div class="row">
+        <button class="primary" id="start">Run agent</button>
+        <span class="meta" id="startmsg"></span>
+      </div>
+    </section>
+    <div style="height:20px"></div>
+    <section>
+      <h2>Waiting for review</h2>
+      <div id="queue"><div class="empty">Nothing paused.</div></div>
+    </section>
+  </div>
+  <div>
+    <section>
+      <h2>Recent runs</h2>
+      <table>
+        <thead><tr><th>Status</th><th>Task</th><th>Steps</th><th>Tokens</th><th>Cost</th></tr></thead>
+        <tbody id="runs"></tbody>
+      </table>
+    </section>
+    <div style="height:20px"></div>
+    <section id="detail"><h2>Run detail</h2><div class="empty">Select a run.</div></section>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") n.className = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  for (const k of kids) n.append(k instanceof Node ? k : document.createTextNode(String(k ?? "")));
+  return n;
+};
+async function api(path, opts = {}) {
+  const headers = { "content-type": "application/json" };
+  const key = $("apikey").value.trim(); if (key) headers["x-api-key"] = key;
+  const res = await fetch(path, { ...opts, headers });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.statusText);
+  return res.json();
+}
+const fmtCost = (c) => "$" + Number(c || 0).toFixed(4);
+
+async function loadExamples() {
+  try {
+    for (const ex of await api("/v1/examples")) {
+      $("examples").append(el("option", { value: ex.prompt }, `${ex.category}: ${ex.prompt}`));
+    }
+  } catch (e) { /* examples are optional */ }
+}
+$("examples").addEventListener("change", (e) => { if (e.target.value) $("task").value = e.target.value; });
+
+$("start").addEventListener("click", async () => {
+  const task = $("task").value.trim(); if (!task) return;
+  $("start").disabled = true; $("startmsg").textContent = "Running...";
+  try {
+    const run = await api("/v1/runs", { method: "POST", body: JSON.stringify({ task }) });
+    $("startmsg").textContent = `Run ${run.run_id.slice(0, 8)} is ${run.status}.`;
+    await refresh(); showRun(run.run_id);
+  } catch (e) { $("startmsg").textContent = e.message; }
+  finally { $("start").disabled = false; }
+});
+
+async function decide(runId, action, note) {
+  const body = { action, note: note || null, reviewer: "console" };
+  await api(`/v1/runs/${runId}/decision`, { method: "POST", body: JSON.stringify(body) });
+  await refresh(); showRun(runId);
+}
+
+function reviewCard(run) {
+  const p = run.pending || {};
+  const note = el("input", { placeholder: "Optional note for the agent" });
+  const buttons = el("div", { class: "row" });
+  for (const action of p.allowed_actions || []) {
+    const cls = action === "reject" ? "reject" : "approve";
+    const label = { approve: "Approve, continue", reject: "Reject, stop", extend_budget: "Extend budget" }[action];
+    buttons.append(el("button", { class: cls, onclick: () => decide(run.run_id, action, note.value) }, label));
+  }
+  const ev = el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Step"), el("th", {}, "Tool"), el("th", {}, "Args"), el("th", {}, "Output"))));
+  const tb = el("tbody");
+  for (const e of p.evidence || []) tb.append(el("tr", {}, el("td", {}, e.step), el("td", {}, e.tool), el("td", { class: "mono" }, e.args), el("td", { class: "mono" }, e.output)));
+  ev.append(tb);
+  return el("div", { class: "card" },
+    el("div", { class: "task" }, run.task),
+    el("div", { class: "why" }, el("span", { class: "pill" }, `${p.kind} / ${p.detector}`), " ", p.message),
+    el("div", { class: "meta" }, `Step ${p.step}, ${run.total_tokens} tokens so far, ${fmtCost(run.cost_usd)}`),
+    (p.evidence || []).length ? ev : "",
+    note, buttons);
+}
+
+async function refresh() {
+  const [paused, recent] = await Promise.all([api("/v1/runs?status=paused"), api("/v1/runs?limit=25")]);
+  $("queue").replaceChildren(...(paused.length ? paused.map(reviewCard) : [el("div", { class: "empty" }, "Nothing paused.")]));
+  $("runs").replaceChildren(...recent.map((r) => el("tr", { onclick: () => showRun(r.run_id), style: "cursor:pointer" },
+    el("td", { class: `s-${r.status}` }, r.status), el("td", {}, r.task), el("td", {}, r.steps),
+    el("td", {}, r.total_tokens), el("td", {}, fmtCost(r.cost_usd)))));
+}
+
+async function showRun(runId) {
+  const r = await api(`/v1/runs/${runId}`);
+  const calls = el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Step"), el("th", {}, "Tool"), el("th", {}, "Args"), el("th", {}, "Output"))));
+  const tb = el("tbody");
+  for (const c of r.tool_calls) tb.append(el("tr", {}, el("td", {}, c.step), el("td", {}, c.tool), el("td", { class: "mono" }, c.args_preview), el("td", { class: "mono" }, c.output_preview)));
+  calls.append(tb);
+  const events = r.guard_events.map((e) => el("div", { class: "meta" }, `step ${e.step}: ${e.kind}/${e.detector} -> ${e.decision || e.action}`));
+  $("detail").replaceChildren(el("h2", {}, "Run detail"),
+    el("div", { class: "task" }, r.task),
+    el("div", { class: "meta" }, `${r.status}${r.stop_reason ? " (" + r.stop_reason + ")" : ""}, ${r.steps} steps, ${r.total_tokens} tokens, ${fmtCost(r.cost_usd)}`),
+    r.final_answer ? el("pre", {}, r.final_answer) : "", ...events, el("div", { style: "height:8px" }), calls);
+}
+
+loadExamples(); refresh(); setInterval(refresh, 5000);
+</script>
+</body>
+</html>

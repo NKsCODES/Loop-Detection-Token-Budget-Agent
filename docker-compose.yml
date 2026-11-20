@@ -1,0 +1,73 @@
+# Local production-like stack: API + PostgreSQL + Prometheus + Grafana
+#   docker compose up --build
+#   API and review console  http://localhost:8000
+#   Prometheus              http://localhost:9090
+#   Grafana                 http://localhost:3000  (admin / admin)
+
+services:
+  api:
+    build: .
+    image: loopguard-agent:local
+    ports:
+      - "8000:8000"
+    environment:
+      LOOPGUARD_ENV: prod
+      LOOPGUARD_DATABASE_URL: postgresql://loopguard:loopguard@postgres:5432/loopguard
+      LOOPGUARD_CHECKPOINT_URL: postgresql://loopguard:loopguard@postgres:5432/loopguard
+      LOOPGUARD_LLM_PROVIDER: ${LOOPGUARD_LLM_PROVIDER:-fake}
+      LOOPGUARD_LLM_MODEL: ${LOOPGUARD_LLM_MODEL:-}
+      LOOPGUARD_API_KEY: ${LOOPGUARD_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Optional LangSmith tracing of every graph step
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-loopguard}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: loopguard
+      POSTGRES_PASSWORD: loopguard
+      POSTGRES_DB: loopguard
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loopguard -d loopguard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  pgdata:

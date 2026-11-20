@@ -1,0 +1,34 @@
+groups:
+  - name: loopguard
+    rules:
+      - record: loopguard:stuck_rate:1h
+        expr: |
+          sum(increase(loopguard_stuck_runs_total[1h]))
+            / clamp_min(sum(increase(loopguard_runs_finished_total[1h])), 1)
+
+      - record: loopguard:loop_pause_rate:1h
+        expr: |
+          sum(increase(loopguard_hitl_pauses_total{kind="loop"}[1h]))
+            / clamp_min(sum(increase(loopguard_runs_started_total[1h])), 1)
+
+      - alert: AgentStuckRateHigh
+        expr: loopguard:stuck_rate:1h > 0.05 and sum(increase(loopguard_runs_finished_total[1h])) > 20
+        for: 15m
+        labels: { severity: page }
+        annotations:
+          summary: "More than 5% of agent runs ended at a hard limit in the last hour"
+          description: "Loops are getting past the detectors. Check loopguard_guard_triggers_total by detector."
+
+      - alert: ReviewQueueBacklog
+        expr: loopguard_pending_reviews > 20
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $value }} agent runs are waiting for a human reviewer"
+
+      - alert: LLMSpendSpike
+        expr: sum(increase(loopguard_llm_cost_usd_total[1h])) > 50
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "LLM spend passed 50 USD in the last hour"
